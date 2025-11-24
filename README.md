@@ -128,7 +128,7 @@ code ~/.config/Claude/claude_desktop_config.json
 {
   "mcpServers": {
     "learning-coach": {
-      "command": "python",
+      "command": "/Users/path/miniconda3/bin/python3",
       "args": ["-m", "src.server"],
       "cwd": "/absolute/path/to/ai-learning-coach/learning-coach-mcp",
       "env": {
@@ -392,14 +392,23 @@ Opens at: http://localhost:8501
 
 ### MCP Server Not Connecting
 
-**Problem:** Claude Desktop doesn't show the learning-coach server
+**Problem:** Claude Desktop doesn't show the learning-coach server or shows "spawn python ENOENT" error
 
 **Solutions:**
-1. Check Claude Desktop config path is correct
-2. Verify absolute path to `learning-coach-mcp` directory
-3. Ensure environment variables are set in config
-4. Restart Claude Desktop completely
-5. Check logs: Look for errors in Claude Desktop console
+1. **Fix "spawn python ENOENT" error**: Use the full path to Python instead of just `python`
+   ```bash
+   # Find your Python path
+   which python3
+   # Use this path in claude_desktop_config.json
+   # Example: "/Users/yourname/miniconda3/bin/python3"
+   ```
+2. Check Claude Desktop config path is correct:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+3. Verify absolute path to `learning-coach-mcp` directory (no relative paths)
+4. Ensure environment variables are set in config (SUPABASE_URL, OPENAI_API_KEY, etc.)
+5. Restart Claude Desktop completely (quit and reopen)
+6. Check logs in Claude Desktop developer console for specific errors
 
 ### Database Connection Errors
 

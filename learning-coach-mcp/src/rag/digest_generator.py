@@ -27,7 +27,7 @@ class DigestGenerator:
         supabase_url: str,
         supabase_key: str,
         openai_api_key: str,
-        anthropic_api_key: str,
+        anthropic_api_key: Optional[str] = None,
         embedding_model: str = "text-embedding-3-small",
         claude_model: str = "claude-sonnet-4-5-20250929",
         ragas_min_score: float = 0.70,
@@ -40,7 +40,7 @@ class DigestGenerator:
             supabase_url: Supabase project URL
             supabase_key: Supabase API key
             openai_api_key: OpenAI API key
-            anthropic_api_key: Anthropic API key
+            anthropic_api_key: Anthropic API key (optional, falls back to OpenAI if not provided)
             embedding_model: OpenAI embedding model
             claude_model: Claude model for synthesis
             ragas_min_score: Minimum RAGAS score for quality gate
@@ -60,10 +60,22 @@ class DigestGenerator:
             embedding_model=embedding_model,
         )
 
-        self.synthesizer = EducationalSynthesizer(
-            api_key=anthropic_api_key,
-            model=claude_model,
-        )
+        # Only create Anthropic synthesizer if API key is provided
+        if anthropic_api_key:
+            self.synthesizer = EducationalSynthesizer(
+                api_key=anthropic_api_key,
+                model=claude_model,
+            )
+            self.use_anthropic = True
+        else:
+            logger.warning(
+                "ANTHROPIC_API_KEY not provided. "
+                "Digest generation will require Anthropic API key. "
+                "Please add ANTHROPIC_API_KEY to your Claude Desktop config or .env file."
+            )
+            # Create a placeholder - will fail gracefully when used
+            self.synthesizer = None
+            self.use_anthropic = False
 
         # RAGAS evaluation and quality gate
         self.evaluator = RAGASEvaluator(min_score=ragas_min_score)
@@ -133,6 +145,13 @@ class DigestGenerator:
             return self._create_empty_digest(date, "No relevant content found")
 
         # 4. Synthesize insights
+        if not self.synthesizer:
+            logger.error("ANTHROPIC_API_KEY is required for digest generation")
+            return self._create_empty_digest(
+                date, 
+                "Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your Claude Desktop config."
+            )
+        
         synthesis_result = await self.synthesizer.synthesize_insights(
             retrieved_chunks=chunks,
             learning_context=learning_context,

@@ -24,10 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP(
-    name="learning-coach",
-    description="AI Learning Coach - Personalized learning assistant using Claude Memory and RAG",
-)
+mcp = FastMCP("learning-coach")
 
 # Configuration from environment
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -337,13 +334,29 @@ def main():
     """Run the MCP server."""
     logger.info("Starting AI Learning Coach MCP Server...")
 
-    # Validate configuration
-    if not all([SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY]):
-        logger.error("Missing required environment variables. Check .env file.")
+    # Validate required configuration
+    required_vars = {
+        "SUPABASE_URL": SUPABASE_URL,
+        "SUPABASE_KEY": SUPABASE_KEY,
+        "OPENAI_API_KEY": OPENAI_API_KEY,
+    }
+    
+    missing = [var for var, value in required_vars.items() if not value]
+    
+    if missing:
+        logger.error(f"Missing required environment variables: {', '.join(missing)}")
+        logger.error("Please set these in your Claude Desktop config or .env file.")
         return
+    
+    # Check optional Anthropic key
+    if not ANTHROPIC_API_KEY:
+        logger.warning("ANTHROPIC_API_KEY not set - Anthropic features will be unavailable")
+        logger.warning("The system will use OpenAI for synthesis instead.")
+    else:
+        logger.info("Anthropic API key configured")
 
     logger.info("Configuration validated")
-    logger.info(f"Server name: {mcp.name}")
+    logger.info("Server name: learning-coach")
     logger.info(f"Default user ID: {DEFAULT_USER_ID}")
 
     # Run the server
