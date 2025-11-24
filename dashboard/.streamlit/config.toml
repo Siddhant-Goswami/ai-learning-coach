@@ -1,0 +1,6 @@
+# Streamlit configuration
+
+[ui]
+# Hide the top deploy/menu buttons
+hideTopBar = false
+hideSidebarNav = true

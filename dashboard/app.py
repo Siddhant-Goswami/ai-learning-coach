@@ -1,11 +1,7 @@
 """
 AI Learning Coach - Streamlit Dashboard
 
-Main dashboard application providing web interface for:
-- Daily digest viewing
-- Past insights search
-- Learning analytics
-- Settings and preferences
+Simplified dashboard showing daily learning digest.
 """
 
 import streamlit as st
@@ -13,14 +9,26 @@ import sys
 from pathlib import Path
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "learning-coach-mcp"))
+learning_coach_path = Path(__file__).parent.parent / "learning-coach-mcp"
+src_path = learning_coach_path / "src"
+sys.path.insert(0, str(src_path))
+sys.path.insert(0, str(learning_coach_path))
 
 from datetime import datetime
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+env_path = Path(__file__).parent.parent / "learning-coach-mcp" / ".env"
+load_dotenv(env_path)
+
+# Set defaults if not found
+if not os.getenv("SUPABASE_URL"):
+    os.environ["SUPABASE_URL"] = "https://hkwuyxqltunphmbmqpsm.supabase.co"
+if not os.getenv("SUPABASE_KEY"):
+    os.environ["SUPABASE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhrd3V5eHFsdHVucGhtYm1xcHNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4OTY2NTAsImV4cCI6MjA3OTQ3MjY1MH0.aGQwSmxrqzTd6M30BkIuGSIiGQAnF-Cb46vJbcw2AoA"
+if not os.getenv("DEFAULT_USER_ID"):
+    os.environ["DEFAULT_USER_ID"] = "00000000-0000-0000-0000-000000000001"
 
 # Page configuration
 st.set_page_config(
@@ -33,19 +41,16 @@ st.set_page_config(
 # Custom CSS for dark theme
 st.markdown("""
 <style>
-    /* Main theme */
     .stApp {
         background-color: #0a0a0a;
         color: #ffffff;
     }
 
-    /* Sidebar */
     section[data-testid="stSidebar"] {
         background-color: #1a1a1a;
         border-right: 1px solid #333333;
     }
 
-    /* Cards */
     .insight-card {
         background: #1a1a1a;
         border: 1px solid #333333;
@@ -54,13 +59,11 @@ st.markdown("""
         margin: 10px 0;
     }
 
-    /* Metrics */
     div[data-testid="stMetricValue"] {
         color: #3b82f6;
-        font-size: 32px;
+        font-size: 28px;
     }
 
-    /* Buttons */
     .stButton>button {
         background-color: #3b82f6;
         color: white;
@@ -74,17 +77,14 @@ st.markdown("""
         background-color: #2563eb;
     }
 
-    /* Headers */
     h1, h2, h3 {
         color: #ffffff;
     }
 
-    /* Text */
     p, span, label {
         color: #a0a0a0;
     }
 
-    /* Expander */
     .streamlit-expanderHeader {
         background-color: #1a1a1a;
         border-radius: 8px;
@@ -99,10 +99,7 @@ if 'user_id' not in st.session_state:
 if 'current_digest' not in st.session_state:
     st.session_state.current_digest = None
 
-if 'learning_context' not in st.session_state:
-    st.session_state.learning_context = None
-
-# Sidebar navigation
+# Sidebar
 with st.sidebar:
     st.title("🎓 AI Learning Coach")
     st.markdown("---")
@@ -110,45 +107,53 @@ with st.sidebar:
     # Navigation
     page = st.radio(
         "Navigation",
-        ["🏠 Today's Digest", "🔍 Search", "📊 Analytics", "⚙️ Settings"],
+        ["📚 Today's Digest", "⚙️ Settings"],
         label_visibility="collapsed"
     )
 
     st.markdown("---")
 
-    # Current progress (mock data for now)
-    st.markdown("### 📈 Your Progress")
-    week_num = 7
-    total_weeks = 24
-    progress = week_num / total_weeks
+    # Get progress from database
+    try:
+        from supabase import create_client
+        client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-    st.metric("Current Week", f"{week_num} / {total_weeks}")
-    st.progress(progress)
-    st.caption(f"{progress * 100:.1f}% Complete")
+        result = client.table('learning_progress').select('*').eq(
+            'user_id', st.session_state.user_id
+        ).execute()
+
+        if result.data:
+            progress_data = result.data[0]
+            week_num = progress_data.get('current_week', 7)
+            topics = progress_data.get('current_topics', [])
+
+            st.markdown("### 📈 Your Progress")
+            total_weeks = 24
+            progress = week_num / total_weeks
+
+            st.metric("Current Week", f"{week_num} / {total_weeks}")
+            st.progress(progress)
+            st.caption(f"{progress * 100:.1f}% Complete")
+
+            st.markdown("---")
+            st.markdown("### 📖 Current Focus")
+            for topic in topics[:3]:
+                st.caption(f"• {topic}")
+        else:
+            st.markdown("### 📈 Your Progress")
+            st.caption("No progress data available")
+    except Exception as e:
+        st.markdown("### 📈 Your Progress")
+        st.caption("Unable to load progress")
 
     st.markdown("---")
-
-    # Quick stats
-    st.markdown("### 📊 Quick Stats")
-    st.metric("This Week", "42 insights", delta="+7")
-    st.metric("Helpful Rate", "85%", delta="+3%")
-
-    st.markdown("---")
-    st.caption("Built with ❤️ using Claude & MCP")
+    st.caption("Powered by OpenAI GPT-4o-mini")
 
 # Main content area
-if page == "🏠 Today's Digest":
-    from pages import home
+if page == "📚 Today's Digest":
+    from views import home
     home.show()
 
-elif page == "🔍 Search":
-    from pages import search
-    search.show()
-
-elif page == "📊 Analytics":
-    from pages import analytics
-    analytics.show()
-
 elif page == "⚙️ Settings":
-    from pages import settings
+    from views import settings
     settings.show()
