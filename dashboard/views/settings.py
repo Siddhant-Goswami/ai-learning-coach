@@ -4,6 +4,7 @@ Settings Page - Simplified version with better error handling
 
 import streamlit as st
 import os
+import sys
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -125,9 +126,32 @@ def show_learning_context():
                     st.success("✓ Learning context created!")
                     st.balloons()
 
+                # Clear today's cached digest since learning context changed
+                from datetime import date
+                today = date.today().isoformat()
+                try:
+                    client.table('generated_digests').delete().eq(
+                        'user_id', st.session_state.user_id
+                    ).eq('digest_date', today).execute()
+                except Exception:
+                    pass  # Ignore if no digest exists
+
+                # Run ingestion to fetch content with new settings
+                st.info("🔄 Running content ingestion with your new settings...")
+                import asyncio
+                sys.path.insert(0, str(Path(__file__).parent.parent))
+                from ingestion_api import run_ingestion_for_user
+
+                result = asyncio.run(run_ingestion_for_user(st.session_state.user_id))
+
+                if result.get("status") == "success":
+                    st.success(f"✓ {result.get('message', 'Ingestion complete')}")
+                else:
+                    st.warning(f"⚠ {result.get('message', 'Ingestion had issues')}")
+
                 # Wait a moment then rerun
                 import time
-                time.sleep(1)
+                time.sleep(2)
                 st.rerun()
 
             except Exception as e:
@@ -175,7 +199,35 @@ def show_sources():
                             client.table('sources').update({
                                 'active': not active
                             }).eq('id', source['id']).execute()
-                            st.success("✓ Updated!")
+
+                            # Clear today's cached digest since sources changed
+                            from datetime import date
+                            today = date.today().isoformat()
+                            try:
+                                client.table('generated_digests').delete().eq(
+                                    'user_id', st.session_state.user_id
+                                ).eq('digest_date', today).execute()
+                            except Exception:
+                                pass  # Ignore if no digest exists
+
+                            st.success("✓ Source updated!")
+
+                            # If activating a source, run ingestion
+                            if not active:  # Was inactive, now active
+                                st.info("🔄 Running ingestion for newly activated source...")
+                                import asyncio
+                                sys.path.insert(0, str(Path(__file__).parent.parent))
+                                from ingestion_api import run_ingestion_for_user
+
+                                result = asyncio.run(run_ingestion_for_user(st.session_state.user_id))
+
+                                if result.get("status") == "success":
+                                    st.success(f"✓ {result.get('message', 'Ingestion complete')}")
+                                else:
+                                    st.warning(f"⚠ {result.get('message', 'Ingestion had issues')}")
+
+                            import time
+                            time.sleep(1)
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error: {e}")

@@ -9,3 +9,10 @@
   $ xcode-select --install
   $ pip install watchdog
             
+Traceback (most recent call last):
+  File "/Users/siddhant/projects/100x/ai-learning-coach/dashboard/ingestion_api.py", line 46, in run_ingestion_for_user
+    from ingestion.orchestrator import IngestionOrchestrator
+  File "/Users/siddhant/projects/100x/ai-learning-coach/learning-coach-mcp/src/ingestion/orchestrator.py", line 18, in <module>
+    from ..utils.db import get_supabase_client
+ImportError: attempted relative import beyond top-level package
+  Stopping...

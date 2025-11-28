@@ -99,14 +99,29 @@ async def generate_and_save_digest():
 
         from digest_api import generate_digest_simple
 
-        await generate_digest_simple(
+        result = await generate_digest_simple(
             user_id=st.session_state.user_id,
             date_obj=date.today(),
             max_insights=7,
             force_refresh=True
         )
+
+        # Check if there was an error
+        if result.get("error"):
+            st.error(f"Error: {result['error']}")
+            if result.get("message"):
+                st.info(result["message"])
+        elif result.get("message"):
+            st.warning(result["message"])
+        elif not result.get("insights"):
+            st.warning("No insights were generated. Please check your configuration.")
+        else:
+            st.success(f"✓ Generated {len(result['insights'])} insights!")
+
     except Exception as e:
         st.error(f"Error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 
 def render_insight_card(insight: dict, idx: int):

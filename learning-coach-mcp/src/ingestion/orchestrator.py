@@ -15,7 +15,7 @@ from supabase import Client
 from .rss_fetcher import RSSFetcher, fetch_multiple_feeds
 from .chunker import TextChunker, chunk_document
 from .embedder import Embedder
-from ..utils.db import get_supabase_client
+from utils.db import get_supabase_client
 
 logger = logging.getLogger(__name__)
 
